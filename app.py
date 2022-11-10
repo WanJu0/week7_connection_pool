@@ -26,7 +26,6 @@ def index():
 
 @app.route("/member")
 def member():
-
     if "name" in session:
         # 向connection pool 請求連接需使用get_connection()方法
         connection_object = connection_pool.get_connection()
@@ -42,13 +41,11 @@ def member():
         print(session["id"])  
         for i in range(0,len(result),1):
             data.append(result[i][0]+":"+result[i][1])
-        return render_template("member.html",name=session["nickname"],data=data)
         mycursor.close()
         connection_object.close()
+        return render_template("member.html",name=session["nickname"],data=data)
     else:
         return redirect("/")
-        mycursor.close()
-        connection_object.close()
     print(session["id"]) 
 
 @app.route("/error")
@@ -73,6 +70,8 @@ def signin():
     result = mycursor.fetchone()
     print(result)
     if result==None:
+        mycursor.close()
+        connection_object.close()
         return redirect("/error?message=帳號或密碼輸入錯誤")
     session["nickname"]=result[1]
     session["name"]=result[2]
@@ -110,6 +109,8 @@ def signup():
     # 根據接收到的資料 和資料庫互動
     
     if result != None:
+        mycursor.close()
+        connection_object.close()
         return redirect("/error?message=信箱已經被註冊")
     # 把資料放進資料庫 完成註冊
     mycursor.execute("INSERT INTO member (name, username, password ) VALUES (%s, %s, %s)" ,(nickname,name,password))
@@ -127,7 +128,8 @@ def message():
     mycursor.execute("INSERT INTO message (member_id,content ) VALUES (%s, %s)" ,(session["id"],message))
     connection_object.commit()
     print(mycursor.rowcount, "record inserted.")
-    
+    mycursor.close()
+    connection_object.close()
     return redirect("/member")
 
 @app.route("/api/member",methods=["GET"])
@@ -150,12 +152,6 @@ def api_member():
         data={
             "data": None
         }
-        json_result=jsonify(data)
-        print("第一次轉換的格式:",type(json_result))
-    
-    print(result)
-    print(data)
-    print(type(data))
     json_result=jsonify(data)
     mycursor.close()
     connection_object.close()
@@ -185,8 +181,6 @@ def api_update():
             "error":True
         }
         json_result=jsonify(data)
-        mycursor.close()
-        connection_object.close()
     return json_result
 
 app.run(port=3000)
